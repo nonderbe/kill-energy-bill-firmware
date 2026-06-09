@@ -19,6 +19,7 @@
 #include "../httpserver/new_http.h"
 #include "drv_killbill_peak.h"
 #include "drv_killbill_p1.h"
+#include "drv_killbill_coordinator.h"
 #include "../pal/keb_pal.h"
 
 #define KEB_MIN_MONTHLY_PEAK_W   2500
@@ -109,7 +110,11 @@ void KillBill_SetPowerW(int power_w) {
     KillBill_Evaluate();
 }
 
-// Called by P1 reader to update monthly peak from OBIS 1-0:1.6.0.
+int KillBill_GetMonthlyPeakW(void) {
+    return g_monthly_peak_w;
+}
+
+// Called by P1 reader or coordinator to update monthly peak.
 void KillBill_UpdateMonthlyPeakW(int w) {
     if (w < KEB_MIN_MONTHLY_PEAK_W) w = KEB_MIN_MONTHLY_PEAK_W;
     if (w != g_monthly_peak_w) {
@@ -147,10 +152,12 @@ void KillBill_Init(void) {
             KEB_WINDOW_SECONDS, KEB_MIN_MONTHLY_PEAK_W, g_buffer_w, g_hysteresis_w);
 
     P1_Init();
+    Coordinator_Init();
 }
 
 void KillBill_OnEverySecond(void) {
     P1_Update();
+    Coordinator_OnEverySecond();
 }
 
 void KillBill_AppendInformationToHTTPIndexPage(http_request_t *request, int bPreState) {

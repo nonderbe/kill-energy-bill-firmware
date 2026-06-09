@@ -12,5 +12,7 @@ void KillBill_AppendInformationToHTTPIndexPage(http_request_t *request, int bPre
 void KillBill_StopDriver(void);
 // Called by P1 reader to push a live power measurement (W).
 void KillBill_SetPowerW(int power_w);
-// Called by P1 reader to update monthly peak from OBIS 1-0:1.6.0 (W).
+// Called by P1 reader or coordinator to update monthly peak (W).
 void KillBill_UpdateMonthlyPeakW(int w);
+// Returns the current monthly peak (W) used by the peak guard.
+int KillBill_GetMonthlyPeakW(void);
