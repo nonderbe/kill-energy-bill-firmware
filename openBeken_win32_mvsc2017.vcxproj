@@ -236,6 +236,7 @@
     <ClCompile Include="src\driver\drv_hue.c" />
     <ClCompile Include="src\driver\drv_ir.cpp" />
     <ClCompile Include="src\driver\drv_killbill_coordinator.c" />
+    <ClCompile Include="src\driver\drv_killbill_ota.c" />
     <ClCompile Include="src\driver\drv_killbill_p1.c" />
     <ClCompile Include="src\driver\drv_killbill_peak.c" />
     <ClCompile Include="src\driver\drv_killbill_webui.c" />
