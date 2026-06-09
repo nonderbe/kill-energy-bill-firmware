@@ -22,7 +22,7 @@
 #include "../pal/keb_pal.h"
 
 #define KEB_MIN_MONTHLY_PEAK_W   2500
-#define KEB_DEFAULT_BUFFER_W     0
+#define KEB_DEFAULT_BUFFER_W     100
 #define KEB_DEFAULT_HYSTERESIS_W 50
 #define KEB_WINDOW_SECONDS       900    // 15 minutes
 #define KEB_RELAY_CHANNEL        1      // OpenBK channel index for the relay
