@@ -235,6 +235,8 @@
     <ClCompile Include="src\driver\drv_httpButtons.c" />
     <ClCompile Include="src\driver\drv_hue.c" />
     <ClCompile Include="src\driver\drv_ir.cpp" />
+    <ClCompile Include="src\driver\drv_killbill_p1.c" />
+    <ClCompile Include="src\driver\drv_killbill_peak.c" />
     <ClCompile Include="src\driver\drv_kp18058.c" />
     <ClCompile Include="src\driver\drv_kp18068.c" />
     <ClCompile Include="src\driver\drv_leds_shared.c" />
@@ -786,6 +788,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="src\pal\keb_pal_obk.c" />
     <ClCompile Include="src\rgb2hsv.c" />
     <ClCompile Include="src\selftest\selftest_batteryDriver.c" />
     <ClCompile Include="src\selftest\selftest_berry.c" />
