@@ -7,5 +7,10 @@
 
 #pragma once
 
+// Bump this for each release. The OTA server rejects downgrades.
+#ifndef KEB_BK_FIRMWARE_VERSION
+#define KEB_BK_FIRMWARE_VERSION "0.9.1"
+#endif
+
 void OTA_Init(void);
 void OTA_Update(void);  // call every second from KillBill_OnEverySecond()

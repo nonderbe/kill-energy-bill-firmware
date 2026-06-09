@@ -41,10 +41,6 @@
 // Configuration
 // ============================================================================
 
-#ifndef KEB_BK_FIRMWARE_VERSION
-#define KEB_BK_FIRMWARE_VERSION "0.9.1"
-#endif
-
 #define OTA_PRIMARY_HOST   "http://firmware.kill-energy-bill.com"
 #define OTA_SECONDARY_HOST "http://firmware.local-share.com"
 #define OTA_CHANNEL        "bk7231n"

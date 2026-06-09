@@ -15,6 +15,7 @@
 #include "../pal/keb_pal.h"
 #include "drv_killbill_peak.h"
 #include "drv_killbill_p1.h"
+#include "drv_killbill_ota.h"
 #include "drv_killbill_webui.h"
 
 #include <stdio.h>
@@ -324,9 +325,10 @@ static int keb_api_state(http_request_t *request) {
     hprintf255(request, "\"shed_active\":%s,\"relay_on\":%s,",
                shed ? "true" : "false",
                relay_on ? "true" : "false");
-    hprintf255(request, "\"p1_alive\":%s,\"p1_host\":\"%s\"}",
+    hprintf255(request, "\"p1_alive\":%s,\"p1_host\":\"%s\",",
                p1_alive ? "true" : "false",
                (p1host && p1host[0]) ? p1host : "");
+    hprintf255(request, "\"firmware_version\":\"%s\"}", KEB_BK_FIRMWARE_VERSION);
     poststr(request, NULL);
     return 0;
 }
