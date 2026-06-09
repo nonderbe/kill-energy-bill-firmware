@@ -14,6 +14,7 @@
 #include "../new_pins.h"
 #include "../cmnds/cmd_public.h"
 #include "../logging/logging.h"
+#include "../httpserver/new_http.h"
 #include "../cJSON/cJSON.h"
 #include "../pal/keb_pal.h"
 #include "drv_killbill_peak.h"
