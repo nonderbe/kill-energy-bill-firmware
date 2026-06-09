@@ -1,9 +1,10 @@
 // Kill Energy Bill — Ed25519 OTA driver for OpenBK (BK7231N + ESP32 ESPIDF)
 //
-// Manifest format (HTTP GET /ota/bk7231n/latest.json):
-//   {"version":"1.2.3","url":"http://...","sha256":"<64hex>","ed25519_sig":"<base64>"}
+// Uses the same /ota/check API as the ESP32 Arduino firmware:
+//   GET http://firmware.local-share.com/ota/check?version=X.Y.Z&channel=bk7231n
+//   Response: {"update_available":true,"version":"...","url":"...","sha256":"...","ed25519_sig":"..."}
 //
-// Verification (same protocol as ESP32 Arduino firmware):
+// Verification:
 //   1. Ed25519-verify the signed message:  sig(64) || sha256_bytes(32)  → valid?
 //   2. Stream firmware binary to OTA flash, compute SHA-256 in parallel
 //   3. Compare computed SHA-256 with manifest sha256
@@ -44,8 +45,9 @@
 #define KEB_BK_FIRMWARE_VERSION "0.9.1"
 #endif
 
-#define OTA_PRIMARY_URL   "http://firmware.kill-energy-bill.com/ota/bk7231n/latest.json"
-#define OTA_SECONDARY_URL "http://firmware.local-share.com/ota/bk7231n/latest.json"
+#define OTA_PRIMARY_HOST   "http://firmware.kill-energy-bill.com"
+#define OTA_SECONDARY_HOST "http://firmware.local-share.com"
+#define OTA_CHANNEL        "bk7231n"
 #define OTA_CHECK_INTERVAL_S  21600u  // 6 hours
 #define OTA_RETRY_INTERVAL_S   1800u  // 30 minutes
 #define OTA_INITIAL_DELAY_S      30u  // first check after boot
@@ -282,6 +284,14 @@ static void on_manifest_ok(const char *body) {
     cJSON *doc = cJSON_Parse(body);
     if (!doc) { keb_log("OTA","manifest JSON fout"); return; }
 
+    // update_available=false → up to date, no further action
+    cJSON *j_avail = cJSON_GetObjectItem(doc,"update_available");
+    if (cJSON_IsBool(j_avail) && !cJSON_IsTrue(j_avail)) {
+        keb_log("OTA","firmware %s up-to-date", KEB_BK_FIRMWARE_VERSION);
+        s_wait_s = OTA_CHECK_INTERVAL_S;
+        cJSON_Delete(doc); return;
+    }
+
     cJSON *j_ver = cJSON_GetObjectItem(doc,"version");
     cJSON *j_url = cJSON_GetObjectItem(doc,"url");
     cJSON *j_sha = cJSON_GetObjectItem(doc,"sha256");
@@ -338,12 +348,15 @@ static void on_manifest_ok(const char *body) {
 
 static void on_secondary(int status, const char *body, void *user);
 
+// Pre-built check URLs (built once in OTA_Update before firing the request)
+static char s_primary_url[192];
+static char s_secondary_url[192];
+
 static void on_primary(int status, const char *body, void *user) {
     (void)user;
     if (status != 200 || !body) {
         keb_log("OTA","primary HTTP %d — probeer secondary", status);
-        // Fire secondary immediately from within this callback
-        keb_http_get(OTA_SECONDARY_URL, 10000, on_secondary, NULL);
+        keb_http_get(s_secondary_url, 10000, on_secondary, NULL);
         return;
     }
     on_manifest_ok(body);
@@ -464,6 +477,12 @@ void OTA_Update(void) {
     if (s_tick_s >= s_wait_s) {
         s_tick_s    = 0;
         s_in_flight = true;
-        keb_http_get(OTA_PRIMARY_URL, 10000, on_primary, NULL);
+        snprintf(s_primary_url,   sizeof(s_primary_url),
+                 OTA_PRIMARY_HOST "/ota/check?version=%s&channel=" OTA_CHANNEL,
+                 KEB_BK_FIRMWARE_VERSION);
+        snprintf(s_secondary_url, sizeof(s_secondary_url),
+                 OTA_SECONDARY_HOST "/ota/check?version=%s&channel=" OTA_CHANNEL,
+                 KEB_BK_FIRMWARE_VERSION);
+        keb_http_get(s_primary_url, 10000, on_primary, NULL);
     }
 }
