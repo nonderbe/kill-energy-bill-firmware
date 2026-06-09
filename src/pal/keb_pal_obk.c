@@ -3,8 +3,8 @@
 // All KEB business-logic modules include keb_pal.h and call these functions.
 // No Arduino types (String, millis, Serial) appear outside this file.
 
-#include "keb_pal.h"
 #include "../new_common.h"
+#include "keb_pal.h"
 #include "../new_pins.h"
 #include "../logging/logging.h"
 #include "../cmnds/cmd_public.h"
