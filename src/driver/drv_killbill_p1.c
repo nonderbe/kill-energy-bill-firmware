@@ -32,6 +32,7 @@ static char     s_p1_host[64];
 static uint16_t s_port;
 static uint32_t s_last_data_ms;
 static uint32_t s_last_telegram_ms;
+static uint32_t s_last_ok_ms;
 static bool     s_data_in_flight;
 static bool     s_telegram_in_flight;
 
@@ -76,6 +77,7 @@ static void on_data_response(int status, const char *body, void *user) {
 
     cJSON_Delete(json);
 
+    s_last_ok_ms = keb_millis();
     KillBill_SetPowerW(net_w);
     keb_log("P1", "smr=%d %dW", smr, net_w);
 }
@@ -118,10 +120,11 @@ static commandResult_t P1_SetPortCmd(const void *ctx, const char *cmd,
 }
 
 void P1_Init(void) {
-    s_p1_host[0]            = '\0';
+    s_p1_host[0]         = '\0';
     s_port               = P1_DEFAULT_PORT;
     s_last_data_ms       = 0;
     s_last_telegram_ms   = 0;
+    s_last_ok_ms         = 0;
     s_data_in_flight     = false;
     s_telegram_in_flight = false;
 
@@ -170,4 +173,13 @@ void P1_Update(void) {
         snprintf(url, sizeof(url), "http://%s:%u/api/v1/telegram", s_p1_host, (unsigned)s_port);
         keb_http_get(url, 5000, on_telegram_response, NULL);
     }
+}
+
+const char *P1_GetHost(void) {
+    return s_p1_host;
+}
+
+bool P1_IsAlive(void) {
+    if (s_last_ok_ms == 0) return false;
+    return (keb_millis() - s_last_ok_ms) < 30000;
 }

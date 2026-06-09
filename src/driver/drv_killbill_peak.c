@@ -20,6 +20,7 @@
 #include "drv_killbill_peak.h"
 #include "drv_killbill_p1.h"
 #include "drv_killbill_coordinator.h"
+#include "drv_killbill_webui.h"
 #include "../pal/keb_pal.h"
 
 #define KEB_MIN_MONTHLY_PEAK_W   2500
@@ -28,11 +29,12 @@
 #define KEB_WINDOW_SECONDS       900    // 15 minutes
 #define KEB_RELAY_CHANNEL        1      // OpenBK channel index for the relay
 
-static int   g_buffer_w      = KEB_DEFAULT_BUFFER_W;
-static int   g_hysteresis_w  = KEB_DEFAULT_HYSTERESIS_W;
+static int   g_buffer_w       = KEB_DEFAULT_BUFFER_W;
+static int   g_hysteresis_w   = KEB_DEFAULT_HYSTERESIS_W;
 static int   g_monthly_peak_w = 0;
 static int   g_quarter_peak_w = 0;
-static bool  g_shed_active   = false;
+static int   g_last_power_w   = 0;
+static bool  g_shed_active    = false;
 
 // Rolling window (one sample per second via OnEverySecond)
 static int   g_window[KEB_WINDOW_SECONDS];
@@ -41,6 +43,7 @@ static int   g_window_count = 0;
 static long  g_window_sum   = 0;
 
 static void KillBill_AddSample(int power_w) {
+    g_last_power_w = power_w;
     if (g_window_count < KEB_WINDOW_SECONDS) {
         g_window_count++;
     } else {
@@ -153,6 +156,7 @@ void KillBill_Init(void) {
 
     P1_Init();
     Coordinator_Init();
+    KillBill_WebUI_Init();
 }
 
 void KillBill_OnEverySecond(void) {
@@ -171,6 +175,12 @@ void KillBill_AppendInformationToHTTPIndexPage(http_request_t *request, int bPre
         g_buffer_w,
         g_shed_active ? "YES" : "no");
 }
+
+int KillBill_GetQuarterPeakW(void)  { return g_quarter_peak_w; }
+int KillBill_GetLastPowerW(void)    { return g_last_power_w; }
+int KillBill_GetBufferW(void)       { return g_buffer_w; }
+int KillBill_GetHysteresisW(void)   { return g_hysteresis_w; }
+bool KillBill_IsShedActive(void)    { return g_shed_active; }
 
 void KillBill_StopDriver(void) {
     g_shed_active  = false;

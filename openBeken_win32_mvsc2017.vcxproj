@@ -238,6 +238,7 @@
     <ClCompile Include="src\driver\drv_killbill_coordinator.c" />
     <ClCompile Include="src\driver\drv_killbill_p1.c" />
     <ClCompile Include="src\driver\drv_killbill_peak.c" />
+    <ClCompile Include="src\driver\drv_killbill_webui.c" />
     <ClCompile Include="src\driver\drv_kp18058.c" />
     <ClCompile Include="src\driver\drv_kp18068.c" />
     <ClCompile Include="src\driver\drv_leds_shared.c" />

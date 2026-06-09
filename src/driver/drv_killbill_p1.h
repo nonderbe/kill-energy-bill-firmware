@@ -7,3 +7,7 @@
 
 void P1_Init(void);
 void P1_Update(void);
+// Returns the configured P1 host string (empty if not set).
+const char *P1_GetHost(void);
+// Returns true if a successful response was received in the last 30 s.
+bool P1_IsAlive(void);

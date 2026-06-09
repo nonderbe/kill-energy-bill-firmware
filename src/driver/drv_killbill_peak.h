@@ -14,5 +14,10 @@ void KillBill_StopDriver(void);
 void KillBill_SetPowerW(int power_w);
 // Called by P1 reader or coordinator to update monthly peak (W).
 void KillBill_UpdateMonthlyPeakW(int w);
-// Returns the current monthly peak (W) used by the peak guard.
-int KillBill_GetMonthlyPeakW(void);
+// State getters used by the web UI driver.
+int  KillBill_GetMonthlyPeakW(void);
+int  KillBill_GetQuarterPeakW(void);
+int  KillBill_GetLastPowerW(void);
+int  KillBill_GetBufferW(void);
+int  KillBill_GetHysteresisW(void);
+bool KillBill_IsShedActive(void);
