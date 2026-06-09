@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../httpserver/new_http.h"
+
 // Kill Energy Bill — peak guard driver
 // Monitors P1 net power and sheds relay when quarter-peak approaches monthly peak.
 // Ported from kill-energy-bill Arduino firmware (peak_guard.cpp).
