@@ -18,6 +18,7 @@
 #include "drv_local.h"
 #include "../httpserver/new_http.h"
 #include "drv_killbill_peak.h"
+#include "drv_killbill_p1.h"
 #include "../pal/keb_pal.h"
 
 #define KEB_MIN_MONTHLY_PEAK_W   2500
@@ -102,10 +103,19 @@ static commandResult_t KillBill_SetMonthlyPeak(const void *ctx, const char *cmd,
     return CMD_RES_OK;
 }
 
-// Called by P1 reader (Stap 3b) to push a live power measurement (W).
+// Called by P1 reader to push a live power measurement (W).
 void KillBill_SetPowerW(int power_w) {
     KillBill_AddSample(power_w);
     KillBill_Evaluate();
+}
+
+// Called by P1 reader to update monthly peak from OBIS 1-0:1.6.0.
+void KillBill_UpdateMonthlyPeakW(int w) {
+    if (w < KEB_MIN_MONTHLY_PEAK_W) w = KEB_MIN_MONTHLY_PEAK_W;
+    if (w != g_monthly_peak_w) {
+        g_monthly_peak_w = w;
+        keb_log("PKG", "monthly_peak updated: %dW", w);
+    }
 }
 
 // startDriver KillBill
@@ -135,11 +145,12 @@ void KillBill_Init(void) {
 
     keb_log("PKG", "peak guard started (window=%ds, min_peak=%dW, buffer=%dW, hyst=%dW)",
             KEB_WINDOW_SECONDS, KEB_MIN_MONTHLY_PEAK_W, g_buffer_w, g_hysteresis_w);
+
+    P1_Init();
 }
 
 void KillBill_OnEverySecond(void) {
-    // TODO (Stap 3b): fetch P1 net power from drv_killbill_p1 and call KillBill_SetPowerW().
-    // For now: no-op until P1 reader is wired up.
+    P1_Update();
 }
 
 void KillBill_AppendInformationToHTTPIndexPage(http_request_t *request, int bPreState) {

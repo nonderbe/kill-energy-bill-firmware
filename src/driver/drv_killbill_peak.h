@@ -8,5 +8,7 @@ void KillBill_Init(void);
 void KillBill_OnEverySecond(void);
 void KillBill_AppendInformationToHTTPIndexPage(http_request_t *request, int bPreState);
 void KillBill_StopDriver(void);
-// Called by the P1 reader (Stap 3b) to push a live power measurement (W).
+// Called by P1 reader to push a live power measurement (W).
 void KillBill_SetPowerW(int power_w);
+// Called by P1 reader to update monthly peak from OBIS 1-0:1.6.0 (W).
+void KillBill_UpdateMonthlyPeakW(int w);

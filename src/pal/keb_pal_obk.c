@@ -122,8 +122,12 @@ static int keb_http_callback(httprequest_t *req) {
 void keb_http_get(const char *url, int timeout_ms, keb_http_cb cb, void *user) {
     (void)timeout_ms; // OpenBK async client has its own timeout
 
+    char *url_copy = strdup(url);
+    if (!url_copy) { cb(-1, NULL, user); return; }
+
     char *body_buf = (char *)malloc(KEB_HTTP_BODY_SIZE);
     if (!body_buf) {
+        free(url_copy);
         cb(-1, NULL, user);
         return;
     }
@@ -131,25 +135,28 @@ void keb_http_get(const char *url, int timeout_ms, keb_http_cb cb, void *user) {
 
     keb_http_ctx_t *ctx = (keb_http_ctx_t *)malloc(sizeof(keb_http_ctx_t));
     if (!ctx) {
+        free(url_copy);
         free(body_buf);
         cb(-1, NULL, user);
         return;
     }
     ctx->cb   = cb;
     ctx->user = user;
-    // body_buf pointer is not stored in ctx — it's owned by the request
 
     httprequest_t *req = (httprequest_t *)malloc(sizeof(httprequest_t));
     if (!req) {
+        free(url_copy);
         free(body_buf);
         free(ctx);
         cb(-1, NULL, user);
         return;
     }
     memset(req, 0, sizeof(*req));
-    req->url                         = url;
+    req->url                         = url_copy;
     req->method                      = HTTPCLIENT_GET;
+    // FREE_URLONDONE: library will call free(req->url) after callback
     req->flags                       = HTTPREQUEST_FLAG_FREE_SELFONDONE |
+                                       HTTPREQUEST_FLAG_FREE_URLONDONE  |
                                        HTTPREQUEST_FLAG_FREE_RESPONSEBUF;
     req->client_data.response_buf     = body_buf;
     req->client_data.response_buf_len = KEB_HTTP_BODY_SIZE;
