@@ -8,3 +8,5 @@ void KillBill_Init(void);
 void KillBill_OnEverySecond(void);
 void KillBill_AppendInformationToHTTPIndexPage(http_request_t *request, int bPreState);
 void KillBill_StopDriver(void);
+// Called by the P1 reader (Stap 3b) to push a live power measurement (W).
+void KillBill_SetPowerW(int power_w);
