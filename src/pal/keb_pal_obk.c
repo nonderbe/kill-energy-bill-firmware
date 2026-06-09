@@ -8,7 +8,10 @@
 #include "../new_pins.h"
 #include "../logging/logging.h"
 #include "../cmnds/cmd_public.h"
+#include "../obk_config.h"
+#if ENABLE_SEND_POSTANDGET
 #include "../httpclient/http_client.h"
+#endif
 #include "../quicktick.h"
 
 #include <stdio.h>
@@ -92,6 +95,9 @@ bool keb_relay_get(int ch) {
 }
 
 // ---- Async HTTP GET --------------------------------------------------------
+// Only available on platforms that include the httpclient stack.
+
+#if ENABLE_SEND_POSTANDGET
 
 #define KEB_HTTP_BODY_SIZE 4096
 
@@ -165,3 +171,12 @@ void keb_http_get(const char *url, int timeout_ms, keb_http_cb cb, void *user) {
 
     HTTPClient_Async_SendGeneric(req);
 }
+
+#else // !ENABLE_SEND_POSTANDGET
+
+void keb_http_get(const char *url, int timeout_ms, keb_http_cb cb, void *user) {
+    (void)url; (void)timeout_ms;
+    cb(-1, NULL, user); // HTTP not supported on this platform
+}
+
+#endif // ENABLE_SEND_POSTANDGET
