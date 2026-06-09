@@ -511,6 +511,7 @@
 #define ENABLE_DRIVER_MQTTSERVER				1
 #endif
 //#define ENABLE_DRIVER_DCF77					1
+#define ENABLE_DRIVER_KILLBILL					1
 
 #elif PLATFORM_TR6260
 

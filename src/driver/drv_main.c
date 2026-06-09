@@ -23,6 +23,9 @@
 #include "drv_ds3231.h"
 #include "drv_hlw8112.h"
 #include "drv_DCF77.h"
+#if ENABLE_DRIVER_KILLBILL
+#include "drv_killbill_peak.h"
+#endif
 
 void DRV_MQTTServer_Init();
 void DRV_MQTTServer_AppendInformationToHTTPIndexPage(http_request_t *request, int bPreState);
@@ -1389,6 +1392,22 @@ static driver_t g_drivers[] = {
 	Batt_AppendInformationToHTTPIndexPage,   // appendInformationToHTTPIndexPage
 	NULL,                                    // runQuickTick
 	Batt_StopDriver,                         // stopFunction
+	NULL,                                    // onChannelChanged
+	NULL,                                    // onHassDiscovery
+	false,                                   // loaded
+	},
+#endif
+#if ENABLE_DRIVER_KILLBILL
+	//drvdetail:{"name":"KillBill",
+	//drvdetail:"title":"Kill Energy Bill peak guard",
+	//drvdetail:"descr":"Monitors P1 net power and sheds relay when rolling 15-min quarter-peak approaches monthly peak. Belgian Fluvius capacity tariff protection.",
+	//drvdetail:"requires":""}
+	{ "KillBill",                            // Driver Name
+	KillBill_Init,                           // Init
+	KillBill_OnEverySecond,                  // onEverySecond
+	KillBill_AppendInformationToHTTPIndexPage, // appendInformationToHTTPIndexPage
+	NULL,                                    // runQuickTick
+	KillBill_StopDriver,                     // stopFunction
 	NULL,                                    // onChannelChanged
 	NULL,                                    // onHassDiscovery
 	false,                                   // loaded
