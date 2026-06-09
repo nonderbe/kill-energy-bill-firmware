@@ -21,7 +21,6 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
 
 #define P1_HOST_KEY              "p1_host"
 #define P1_PORT_KEY              "p1_port"
@@ -29,7 +28,7 @@
 #define P1_DATA_INTERVAL_MS      5000
 #define P1_TELEGRAM_INTERVAL_MS  60000
 
-static char     s_host[64];
+static char     s_p1_host[64];
 static uint16_t s_port;
 static uint32_t s_last_data_ms;
 static uint32_t s_last_telegram_ms;
@@ -98,12 +97,12 @@ static commandResult_t P1_SetHostCmd(const void *ctx, const char *cmd,
     if (Tokenizer_CheckArgsCountAndPrintWarning(cmd, 1))
         return CMD_RES_NOT_ENOUGH_ARGUMENTS;
     const char *host = Tokenizer_GetArg(0);
-    strncpy(s_host, host, sizeof(s_host) - 1);
-    s_host[sizeof(s_host) - 1] = '\0';
-    keb_cfg_set_str(P1_HOST_KEY, s_host);
+    strncpy(s_p1_host, host, sizeof(s_p1_host) - 1);
+    s_p1_host[sizeof(s_p1_host) - 1] = '\0';
+    keb_cfg_set_str(P1_HOST_KEY, s_p1_host);
     s_last_data_ms     = 0; // trigger immediate poll
     s_last_telegram_ms = 0;
-    keb_log("P1", "host set: %s", s_host);
+    keb_log("P1", "host set: %s", s_p1_host);
     return CMD_RES_OK;
 }
 
@@ -119,14 +118,14 @@ static commandResult_t P1_SetPortCmd(const void *ctx, const char *cmd,
 }
 
 void P1_Init(void) {
-    s_host[0]            = '\0';
+    s_p1_host[0]            = '\0';
     s_port               = P1_DEFAULT_PORT;
     s_last_data_ms       = 0;
     s_last_telegram_ms   = 0;
     s_data_in_flight     = false;
     s_telegram_in_flight = false;
 
-    keb_cfg_get_str(P1_HOST_KEY, s_host, sizeof(s_host));
+    keb_cfg_get_str(P1_HOST_KEY, s_p1_host, sizeof(s_p1_host));
     int32_t port;
     if (keb_cfg_get_i32(P1_PORT_KEY, &port)) s_port = (uint16_t)port;
 
@@ -142,15 +141,15 @@ void P1_Init(void) {
     //cmddetail:"examples":"KEB_SetP1Port 80"}
     CMD_RegisterCommand("KEB_SetP1Port", P1_SetPortCmd, NULL);
 
-    if (s_host[0] != '\0') {
-        keb_log("P1", "host=%s port=%u", s_host, s_port);
+    if (s_p1_host[0] != '\0') {
+        keb_log("P1", "host=%s port=%u", s_p1_host, s_port);
     } else {
         keb_log("P1", "no host — use KEB_SetP1Host <ip> to configure");
     }
 }
 
 void P1_Update(void) {
-    if (s_host[0] == '\0') return;
+    if (s_p1_host[0] == '\0') return;
 
     uint32_t now = keb_millis();
 
@@ -159,7 +158,7 @@ void P1_Update(void) {
         s_last_data_ms   = now;
         s_data_in_flight = true;
         char url[128];
-        snprintf(url, sizeof(url), "http://%s:%u/api/v1/data", s_host, (unsigned)s_port);
+        snprintf(url, sizeof(url), "http://%s:%u/api/v1/data", s_p1_host, (unsigned)s_port);
         keb_http_get(url, 5000, on_data_response, NULL);
     }
 
@@ -168,7 +167,7 @@ void P1_Update(void) {
         s_last_telegram_ms   = now;
         s_telegram_in_flight = true;
         char url[128];
-        snprintf(url, sizeof(url), "http://%s:%u/api/v1/telegram", s_host, (unsigned)s_port);
+        snprintf(url, sizeof(url), "http://%s:%u/api/v1/telegram", s_p1_host, (unsigned)s_port);
         keb_http_get(url, 5000, on_telegram_response, NULL);
     }
 }
