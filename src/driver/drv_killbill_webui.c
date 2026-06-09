@@ -90,6 +90,8 @@ static const char KEB_CSS[] =
     ".grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;}"
     ".metric{background:var(--g5);border:1px solid #bbf7d0;border-radius:6px;padding:12px;text-align:center;}"
     ".metric .val{font-size:1.8rem;font-weight:bold;color:var(--g7);}"
+    ".metric .val.on{color:var(--g6);}"
+    ".metric .val.off{color:var(--r6);}"
     ".metric .lbl{font-size:.75rem;color:var(--gr500);margin-top:4px;}"
     "label{font-size:.85rem;color:var(--gr700);display:block;margin-bottom:2px;}"
     "input{background:#fff;color:var(--gr900);border:1px solid #d1d5db;border-radius:4px;"
