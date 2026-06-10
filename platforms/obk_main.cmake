@@ -69,6 +69,7 @@ set(OBKM_SRC
 	${OBK_SRCS}driver/drv_killbill_coordinator.c
 	${OBK_SRCS}driver/drv_killbill_webui.c
 	${OBK_SRCS}driver/drv_killbill_ota.c
+	${OBK_SRCS}driver/drv_killbill_cloud.c
 	${OBK_SRCS}pal/keb_pal_obk.c
 	${OBK_SRCS}driver/drv_bl0942.c
 	${OBK_SRCS}driver/drv_bl_shared.c

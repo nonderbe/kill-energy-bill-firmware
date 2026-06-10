@@ -22,6 +22,7 @@
 #include "drv_killbill_coordinator.h"
 #include "drv_killbill_webui.h"
 #include "drv_killbill_ota.h"
+#include "drv_killbill_cloud.h"
 #include "../pal/keb_pal.h"
 
 #define KEB_MIN_MONTHLY_PEAK_W   2500
@@ -159,12 +160,14 @@ void KillBill_Init(void) {
     Coordinator_Init();
     KillBill_WebUI_Init();
     OTA_Init();
+    KebCloud_Init();
 }
 
 void KillBill_OnEverySecond(void) {
     P1_Update();
     Coordinator_OnEverySecond();
     OTA_Update();
+    KebCloud_Update();
 }
 
 void KillBill_AppendInformationToHTTPIndexPage(http_request_t *request, int bPreState) {

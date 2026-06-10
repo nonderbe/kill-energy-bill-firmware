@@ -16,6 +16,7 @@
 #include "drv_killbill_peak.h"
 #include "drv_killbill_p1.h"
 #include "drv_killbill_ota.h"
+#include "drv_killbill_cloud.h"
 #include "drv_killbill_webui.h"
 
 #include <stdio.h>
@@ -328,7 +329,11 @@ static int keb_api_state(http_request_t *request) {
     hprintf255(request, "\"p1_alive\":%s,\"p1_host\":\"%s\",",
                p1_alive ? "true" : "false",
                (p1host && p1host[0]) ? p1host : "");
-    hprintf255(request, "\"firmware_version\":\"%s\"}", KEB_BK_FIRMWARE_VERSION);
+    hprintf255(request, "\"firmware_version\":\"%s\",", KEB_BK_FIRMWARE_VERSION);
+    hprintf255(request, "\"features\":{\"cascade\":%s,\"advanced_scheduling\":%s,\"premium_reports\":%s}}",
+               keb_feature_enabled("cascade")             ? "true" : "false",
+               keb_feature_enabled("advanced_scheduling")  ? "true" : "false",
+               keb_feature_enabled("premium_reports")      ? "true" : "false");
     poststr(request, NULL);
     return 0;
 }
