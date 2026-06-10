@@ -1,9 +1,9 @@
 // Kill Energy Bill — branded web UI (OpenBK port)
 //
 // Routes registered:
-//   GET  /           → KEB dashboard (SPA — live data via /api/state)
+//   GET  /keb        → KEB dashboard (SPA — live data via /keb/state)
 //   GET  /keb/cfg    → KEB config page (buffer_w, hysteresis_w, p1_host, priority)
-//   GET  /api/state  → JSON: current KEB state
+//   GET  /keb/state  → JSON: current KEB state
 //   POST /api/config → save KEB config params (form-encoded body)
 
 #include "../new_common.h"
@@ -205,7 +205,7 @@ static int keb_serve_dashboard(http_request_t *request) {
         "if(d.p1_alive){p1.textContent=d.p1_host||'OK';p1.className='val on';}"
         "else{p1.textContent=d.p1_host?'Geen data':'Niet geconfigureerd';p1.className='val off';}"
         "}"
-        "function poll(){fetch('/api/state').then(function(r){return r.json();}).then(upd).catch(function(){});}"
+        "function poll(){fetch('/keb/state').then(function(r){return r.json();}).then(upd).catch(function(){});}"
         "setInterval(poll,2000);"
         "poll();"
         "</script>"
@@ -263,7 +263,7 @@ static int keb_serve_config(http_request_t *request) {
 
         "<script>"
         // Load current values from /api/state on page load
-        "fetch('/api/state').then(function(r){return r.json();}).then(function(d){"
+        "fetch('/keb/state').then(function(r){return r.json();}).then(function(d){"
         "document.getElementById('buf').value=d.buffer_w||0;"
         "document.getElementById('hys').value=d.hysteresis_w||50;"
         "document.getElementById('prio').value=d.priority||5;"
@@ -278,7 +278,7 @@ static int keb_serve_config(http_request_t *request) {
         "'priority='+encodeURIComponent(document.getElementById('prio').value),"
         "'p1_host='+encodeURIComponent(document.getElementById('p1h').value)"
         "].join('&');"
-        "fetch('/api/config',{"
+        "fetch('/keb/config',{"
         "method:'POST',"
         "headers:{'Content-Type':'application/x-www-form-urlencoded'},"
         "body:body"
