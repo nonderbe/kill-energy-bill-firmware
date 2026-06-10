@@ -381,9 +381,9 @@ static int keb_api_config_save(http_request_t *request) {
 // Init — called from KillBill_Init() after sub-drivers are ready
 // ---------------------------------------------------------------------------
 void KillBill_WebUI_Init(void) {
-    HTTP_RegisterCallback("/",           HTTP_GET,  keb_serve_dashboard,  0);
+    HTTP_RegisterCallback("/keb",        HTTP_GET,  keb_serve_dashboard,  0);
     HTTP_RegisterCallback("/keb/cfg",    HTTP_GET,  keb_serve_config,     0);
-    HTTP_RegisterCallback("/api/state",  HTTP_GET,  keb_api_state,        0);
-    HTTP_RegisterCallback("/api/config", HTTP_POST, keb_api_config_save,  0);
-    keb_log("WEBUI", "routes registered: / /keb/cfg /api/state /api/config");
+    HTTP_RegisterCallback("/keb/state",  HTTP_GET,  keb_api_state,        0);
+    HTTP_RegisterCallback("/keb/config", HTTP_POST, keb_api_config_save,  0);
+    keb_log("WEBUI", "routes registered: /keb /keb/cfg /keb/state /keb/config");
 }
