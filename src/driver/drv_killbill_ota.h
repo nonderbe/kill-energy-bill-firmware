@@ -9,7 +9,7 @@
 
 // Bump this for each release. The OTA server rejects downgrades.
 #ifndef KEB_BK_FIRMWARE_VERSION
-#define KEB_BK_FIRMWARE_VERSION "0.9.1"
+#define KEB_BK_FIRMWARE_VERSION "0.9.2"
 #endif
 
 void OTA_Init(void);
