@@ -118,6 +118,8 @@ static void sha256_final(sha256_ctx_t *c, uint8_t out[32]){
 // TweetNaCl Ed25519 verify (public-domain verify-only subset)
 // Source: tweetnacl.20140427.c — D.J.Bernstein et al.  https://tweetnacl.cr.yp.to/
 // ============================================================================
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmisleading-indentation"
 
 typedef unsigned char      tn_u8;
 typedef unsigned long long tn_u64;
@@ -213,6 +215,8 @@ static int tn_open(tn_u8*m,tn_u64*mlen,const tn_u8*sm,tn_u64 smlen,const tn_u8*p
   TN_FOR(i,(int)smlen)m[i]=sm[i+64];*mlen=smlen;return 0;
 }
 
+#pragma GCC diagnostic pop
+
 // ============================================================================
 // Verify Ed25519 signature over SHA-256 hash
 // ============================================================================
@@ -269,7 +273,9 @@ static bool ota_is_newer(const char *candidate, const char *current) {
     int ca=0,cb=0,cc=0,da=0,db=0,dc=0;
     if (sscanf(candidate,"%d.%d.%d",&ca,&cb,&cc)!=3) return false;
     if (sscanf(current,  "%d.%d.%d",&da,&db,&dc)!=3) return false;
-    if (ca!=da) return ca>da; if (cb!=db) return cb>db; return cc>dc;
+    if (ca!=da) return ca>da;
+    if (cb!=db) return cb>db;
+    return cc>dc;
 }
 
 // ============================================================================
