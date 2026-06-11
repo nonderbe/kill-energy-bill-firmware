@@ -8,6 +8,9 @@
 #include "../new_pins.h"
 #include "../logging/logging.h"
 #include "../cmnds/cmd_public.h"
+#if ENABLE_LITTLEFS
+#include "../littlefs/our_lfs.h"
+#endif
 #include "../obk_config.h"
 #if ENABLE_SEND_POSTANDGET
 #include "../httpclient/http_client.h"
@@ -65,6 +68,11 @@ bool keb_cfg_set_str(const char *key, const char *val) {
     keb_cfg_path(key, path);
     char buf[66];
     snprintf(buf, sizeof(buf), "%s\n", val);
+#if ENABLE_LITTLEFS
+    // Ensure /keb/ directory exists — lfs_mkdir returns LFS_ERR_EXIST when it
+    // already exists, which is fine to ignore.
+    lfs_mkdir(&lfs, "/keb");
+#endif
     return LFS_WriteFile(path, (const byte *)buf, (int)strlen(buf), false) == 0;
 }
 
