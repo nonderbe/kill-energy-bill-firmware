@@ -168,6 +168,11 @@ void keb_http_get(const char *url, int timeout_ms, keb_http_cb cb, void *user) {
     memset(req, 0, sizeof(*req));
     req->url                         = url_copy;
     req->method                      = HTTPCLIENT_GET;
+    // httpclient_parse_host() compares against uppercase "HTTP://" — case-sensitive —
+    // so lowercase http:// URLs leave req->port = 0, which causes connect() to port 0.
+    // Pre-populate the port here so the async thread starts with the right default.
+    if (strncmp(url, "https://", 8) == 0) req->port = 443;
+    else if (strncmp(url, "http://", 7) == 0) req->port = 80;
     // FREE_URLONDONE: library will call free(req->url) after callback
     req->flags                       = HTTPREQUEST_FLAG_FREE_SELFONDONE |
                                        HTTPREQUEST_FLAG_FREE_URLONDONE  |
