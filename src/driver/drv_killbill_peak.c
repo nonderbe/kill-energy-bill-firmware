@@ -130,6 +130,26 @@ void KillBill_UpdateMonthlyPeakW(int w) {
 
 // startDriver KillBill
 void KillBill_Init(void) {
+    // Rename device to keb-{mac} if still carrying the OpenBK-assigned default.
+    // Effect: mDNS advertises as keb-XXXXXXXX.local instead of esp/obk-XXXXXXXX.local.
+    // Applies on the next boot (mDNS reads the name at startup before drivers run).
+    // Does not touch g_cfg.mqtt_clientId, so MQTT uniqueness is preserved.
+    {
+        const char *cur = CFG_GetShortDeviceName();
+        if (strncmp(cur, "keb", 3) != 0 && *cur != '\0') {
+            // Extract the MAC suffix: the default name is PREFIX+8hexchars.
+            size_t len = strlen(cur);
+            const char *mac_hex = len >= 8 ? cur + len - 8 : cur;
+            char keb_name[20];
+            snprintf(keb_name, sizeof(keb_name), "keb-%s", mac_hex);
+            // Lowercase for a clean mDNS hostname (keb-31c085b8.local).
+            for (char *p = keb_name; *p; p++) {
+                if (*p >= 'A' && *p <= 'Z') *p += 32;
+            }
+            CFG_SetShortDeviceName(keb_name);
+        }
+    }
+
     // Load persisted config
     int32_t v;
     if (keb_cfg_get_i32("keb_buffer_w", &v))    g_buffer_w    = (int)v;
