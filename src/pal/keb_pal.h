@@ -35,6 +35,11 @@ bool keb_relay_get(int ch);
 typedef void (*keb_http_cb)(int status, const char *body, void *user);
 void keb_http_get(const char *url, int timeout_ms, keb_http_cb cb, void *user);
 
+// --- Network ---
+// Returns the device's current IPv4 address in network byte order, or 0 if WiFi
+// is not connected yet. Intended for passing to keb_mdns_name_conflict().
+uint32_t keb_get_ipv4(void);
+
 // --- Background task ---
 // Spawns a new FreeRTOS/RTOS task that calls fn(arg) once then exits.
 // Stack size is fixed at 4 KB — suitable for blocking I/O (mDNS discovery, etc.).

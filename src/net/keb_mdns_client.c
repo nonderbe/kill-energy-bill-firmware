@@ -260,6 +260,138 @@ static bool http_probe_p1(const char *host, uint16_t port) {
     return strstr(resp, "active_power_w") != NULL;
 }
 
+// ---- Hostname conflict probe -----------------------------------------------
+
+// Build a DNS A query with the QU bit for `hostname.local`.
+static int build_a_query(uint8_t *buf, int cap, const char *hostname) {
+    if (cap < 12) return 0;
+    buf[0]=0;  buf[1]=2;   // ID=2 (distinct from PTR query ID=1)
+    buf[2]=0;  buf[3]=0;
+    buf[4]=0;  buf[5]=1;   // QDCOUNT=1
+    buf[6]=0;  buf[7]=0;
+    buf[8]=0;  buf[9]=0;
+    buf[10]=0; buf[11]=0;
+    char fqdn[48];
+    snprintf(fqdn, sizeof(fqdn), "%s.local", hostname);
+    int pos = 12;
+    int n = dns_encode_name(buf + pos, cap - pos, fqdn);
+    if (!n) return 0;
+    pos += n;
+    if (pos + 4 > cap) return 0;
+    buf[pos++] = 0x00; buf[pos++] = DNS_TYPE_A;
+    buf[pos++] = (DNS_CLASS_QU >> 8) & 0xFF;
+    buf[pos++] =  DNS_CLASS_QU       & 0xFF;
+    return pos;
+}
+
+// Parse a DNS response for an A record; returns the IP as uint32_t (network byte
+// order), or 0 if not found.
+static uint32_t parse_a_record_ip(const uint8_t *pkt, int len) {
+    if (len < 12) return 0;
+    int qdcount = (pkt[4]  << 8) | pkt[5];
+    int ancount = (pkt[6]  << 8) | pkt[7];
+    int nscount = (pkt[8]  << 8) | pkt[9];
+    int arcount = (pkt[10] << 8) | pkt[11];
+    int pos = 12;
+
+    for (int i = 0; i < qdcount && pos < len; i++) {
+        char tmp[64];
+        int c = dns_decode_name(pkt, len, pos, tmp, sizeof(tmp));
+        if (c <= 0) return 0;
+        pos += c + 4;
+    }
+
+    int total = ancount + nscount + arcount;
+    if (total > 64) total = 64;
+    for (int i = 0; i < total && pos + 10 <= len; i++) {
+        char rname[64];
+        int c = dns_decode_name(pkt, len, pos, rname, sizeof(rname));
+        if (c <= 0) break;
+        pos += c;
+        if (pos + 10 > len) break;
+        uint16_t rtype = (pkt[pos]   << 8) | pkt[pos+1];
+        uint16_t rdlen = (pkt[pos+8] << 8) | pkt[pos+9];
+        pos += 10;
+        if (pos + rdlen > len) break;
+        if (rtype == DNS_TYPE_A && rdlen == 4) {
+            uint32_t ip;
+            memcpy(&ip, pkt + pos, 4);
+            return ip;
+        }
+        pos += rdlen;
+    }
+    return 0;
+}
+
+// Probe hostname.local with a 300 ms window.
+// Returns true if another device (IP ≠ own_ip) holds the name.
+bool keb_mdns_name_conflict(const char *hostname, uint32_t own_ip) {
+    int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if (sock < 0) return false;
+
+    struct sockaddr_in local = {0};
+    local.sin_family      = AF_INET;
+    local.sin_addr.s_addr = INADDR_ANY;
+    local.sin_port        = 0;
+    if (bind(sock, (struct sockaddr *)&local, sizeof(local)) < 0) {
+        close(sock);
+        return false;
+    }
+
+    struct timeval tv = { .tv_sec = 0, .tv_usec = 300000 };
+    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+
+    uint8_t qbuf[128];
+    int qlen = build_a_query(qbuf, sizeof(qbuf), hostname);
+    if (!qlen) { close(sock); return false; }
+
+    struct sockaddr_in dst = {0};
+    dst.sin_family      = AF_INET;
+    dst.sin_port        = htons(MDNS_PORT);
+    dst.sin_addr.s_addr = inet_addr(MDNS_GROUP);
+    sendto(sock, qbuf, qlen, 0, (struct sockaddr *)&dst, sizeof(dst));
+
+    uint8_t rbuf[MDNS_BUF];
+    bool conflict = false;
+    while (!conflict) {
+        struct sockaddr_in src;
+        socklen_t src_len = sizeof(src);
+        int n = recvfrom(sock, rbuf, sizeof(rbuf), 0,
+                         (struct sockaddr *)&src, &src_len);
+        if (n <= 0) break;
+        uint32_t resp_ip = parse_a_record_ip(rbuf, n);
+        if (resp_ip == 0) {
+            // No A record in this packet — use the sender's IP as fallback
+            resp_ip = src.sin_addr.s_addr;
+        }
+        if (resp_ip != 0 && resp_ip != own_ip) {
+            conflict = true;
+        }
+    }
+    close(sock);
+    return conflict;
+}
+
+void keb_mdns_resolve_hostname(const char *base_name, uint32_t own_ip,
+                               char *out, size_t out_len) {
+    char candidate[32];
+    // Try base_name, then base_name-1 through base_name-9
+    strncpy(candidate, base_name, sizeof(candidate) - 1);
+    candidate[sizeof(candidate) - 1] = '\0';
+
+    for (int i = 0; i <= 9; i++) {
+        if (!keb_mdns_name_conflict(candidate, own_ip)) {
+            strncpy(out, candidate, out_len - 1);
+            out[out_len - 1] = '\0';
+            return;
+        }
+        snprintf(candidate, sizeof(candidate), "%s-%d", base_name, i + 1);
+    }
+    // All taken — fall back to base_name
+    strncpy(out, base_name, out_len - 1);
+    out[out_len - 1] = '\0';
+}
+
 // ---- Public API ------------------------------------------------------------
 
 bool keb_mdns_discover_p1(char *host_out, size_t host_len, uint16_t *port_out) {
@@ -290,6 +422,18 @@ bool keb_mdns_discover_p1(char *host_out, size_t host_len, uint16_t *port_out) {
 bool keb_mdns_discover_p1(char *host_out, size_t host_len, uint16_t *port_out) {
     (void)host_out; (void)host_len; (void)port_out;
     return false;
+}
+
+bool keb_mdns_name_conflict(const char *hostname, uint32_t own_ip) {
+    (void)hostname; (void)own_ip;
+    return false;
+}
+
+void keb_mdns_resolve_hostname(const char *base_name, uint32_t own_ip,
+                               char *out, size_t out_len) {
+    (void)own_ip;
+    strncpy(out, base_name, out_len - 1);
+    out[out_len - 1] = '\0';
 }
 
 #endif

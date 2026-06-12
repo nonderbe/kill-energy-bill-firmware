@@ -24,6 +24,7 @@
 #include "drv_killbill_ota.h"
 #include "drv_killbill_cloud.h"
 #include "../pal/keb_pal.h"
+#include "../net/keb_mdns_client.h"
 
 #define KEB_MIN_MONTHLY_PEAK_W   2500
 #define KEB_DEFAULT_BUFFER_W     100
@@ -128,10 +129,40 @@ void KillBill_UpdateMonthlyPeakW(int w) {
     }
 }
 
+// Background task: wait for WiFi, then find the lowest non-conflicting
+// kill-energy-bill[-N].local hostname and persist it for the next boot.
+static void hostname_resolve_task(void *arg) {
+    (void)arg;
+    // Wait up to 30 s for WiFi to assign us an IP (checked every 500 ms).
+    // Without a valid own IP we cannot distinguish self-responses from conflicts.
+    uint32_t start = keb_millis();
+    uint32_t own_ip = 0;
+    while ((keb_millis() - start) < 30000) {
+        own_ip = keb_get_ipv4();
+        if (own_ip) break;
+        rtos_delay_milliseconds(500);
+    }
+    if (!own_ip) {
+        keb_log("PKG", "hostname resolve: no IP after 30s, skipping");
+        return;
+    }
+
+    char resolved[32];
+    keb_mdns_resolve_hostname("kill-energy-bill", own_ip, resolved, sizeof(resolved));
+
+    const char *cur = CFG_GetShortDeviceName();
+    if (strcmp(resolved, cur) != 0) {
+        keb_log("PKG", "hostname: %s -> %s (takes effect on next boot)", cur, resolved);
+        CFG_SetShortDeviceName(resolved);
+    } else {
+        keb_log("PKG", "hostname: %s (no conflict)", cur);
+    }
+}
+
 // startDriver KillBill
 void KillBill_Init(void) {
-    // Fixed shared mDNS hostname — all Kill Energy Bill plugs advertise as
-    // kill-energy-bill.local.  MQTT client ID stays MAC-derived and stays unique.
+    // Set a KEB hostname if the device still has the OpenBK-assigned default.
+    // The conflict-resolution task (below) may refine this to kill-energy-bill-N.
     // Applies on the next boot (mDNS reads the name at startup before drivers run).
     {
         const char *cur = CFG_GetShortDeviceName();
@@ -139,6 +170,9 @@ void KillBill_Init(void) {
             CFG_SetShortDeviceName("kill-energy-bill");
         }
     }
+
+    // Resolve hostname conflicts with other KEB devices on the same LAN.
+    keb_run_in_background("keb_hostname", hostname_resolve_task, NULL);
 
     // Load persisted config
     int32_t v;

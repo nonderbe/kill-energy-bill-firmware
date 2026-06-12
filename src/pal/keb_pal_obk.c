@@ -194,6 +194,15 @@ void keb_http_get(const char *url, int timeout_ms, keb_http_cb cb, void *user) {
 
 #endif // ENABLE_SEND_POSTANDGET
 
+// ---- Network ---------------------------------------------------------------
+
+#include <lwip/netif.h>
+
+uint32_t keb_get_ipv4(void) {
+    if (!netif_default) return 0;
+    return netif_default->ip_addr.addr;
+}
+
 // ---- Background task -------------------------------------------------------
 
 typedef struct {
