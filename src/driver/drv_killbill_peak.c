@@ -23,6 +23,7 @@
 #include "drv_killbill_webui.h"
 #include "drv_killbill_ota.h"
 #include "drv_killbill_cloud.h"
+#include "drv_killbill_portal.h"
 #include "../pal/keb_pal.h"
 #include "../net/keb_mdns_client.h"
 
@@ -200,6 +201,7 @@ void KillBill_Init(void) {
     keb_log("PKG", "peak guard started (window=%ds, min_peak=%dW, buffer=%dW, hyst=%dW)",
             KEB_WINDOW_SECONDS, KEB_MIN_MONTHLY_PEAK_W, g_buffer_w, g_hysteresis_w);
 
+    KillBill_Portal_Init();
     P1_Init();
     Coordinator_Init();
     KillBill_WebUI_Init();
