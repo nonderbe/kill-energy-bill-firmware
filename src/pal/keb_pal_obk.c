@@ -196,12 +196,16 @@ void keb_http_get(const char *url, int timeout_ms, keb_http_cb cb, void *user) {
 
 // ---- Network ---------------------------------------------------------------
 
+#if !WINDOWS
 #include <lwip/netif.h>
 
 uint32_t keb_get_ipv4(void) {
     if (!netif_default) return 0;
     return netif_default->ip_addr.addr;
 }
+#else
+uint32_t keb_get_ipv4(void) { return 0; }
+#endif
 
 // ---- Background task -------------------------------------------------------
 
@@ -210,15 +214,13 @@ typedef struct {
     void        *arg;
 } keb_bg_args_t;
 
-// Single entry point for all background tasks — return type int satisfies
-// beken_thread_function_t on BK7231N; on ESP32 IDF the int is ignored.
-// The task deletes itself via rtos_delete_thread on exit.
-static int keb_bg_entry(void *raw) {
+// beken_thread_function_t is void(*)(void*) on ESP32 IDF and void(*)(void*) on BK7231N.
+// Returning void matches the type directly on ESP-IDF; BK7231N ignores the return value.
+static void keb_bg_entry(void *raw) {
     keb_bg_args_t *a = (keb_bg_args_t *)raw;
     a->fn(a->arg);
     free(a);
     rtos_delete_thread(NULL);
-    return 0;
 }
 
 void keb_run_in_background(const char *name, keb_task_fn fn, void *arg) {
