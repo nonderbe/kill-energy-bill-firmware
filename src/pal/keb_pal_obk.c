@@ -193,3 +193,31 @@ void keb_http_get(const char *url, int timeout_ms, keb_http_cb cb, void *user) {
 }
 
 #endif // ENABLE_SEND_POSTANDGET
+
+// ---- Background task -------------------------------------------------------
+
+typedef struct {
+    keb_task_fn  fn;
+    void        *arg;
+} keb_bg_args_t;
+
+// Single entry point for all background tasks — return type int satisfies
+// beken_thread_function_t on BK7231N; on ESP32 IDF the int is ignored.
+// The task deletes itself via rtos_delete_thread on exit.
+static int keb_bg_entry(void *raw) {
+    keb_bg_args_t *a = (keb_bg_args_t *)raw;
+    a->fn(a->arg);
+    free(a);
+    rtos_delete_thread(NULL);
+    return 0;
+}
+
+void keb_run_in_background(const char *name, keb_task_fn fn, void *arg) {
+    keb_bg_args_t *a = (keb_bg_args_t *)malloc(sizeof(keb_bg_args_t));
+    if (!a) return;
+    a->fn  = fn;
+    a->arg = arg;
+    rtos_create_thread(NULL, BEKEN_APPLICATION_PRIORITY, name,
+                       (beken_thread_function_t)keb_bg_entry,
+                       4096, (beken_thread_arg_t)a);
+}

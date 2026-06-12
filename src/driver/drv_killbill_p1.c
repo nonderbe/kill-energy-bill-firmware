@@ -8,6 +8,9 @@
 //   /keb/p1_host  — IP or hostname of the P1 meter (e.g. "192.168.1.42")
 //   /keb/p1_port  — TCP port, default 80
 //
+// If no host is configured, mDNS discovery runs in the background and fills in
+// the host automatically.  Discovery retries every 60 s until a meter is found.
+//
 // To configure at runtime: KEB_SetP1Host <ip>  (optionally: KEB_SetP1Port <port>)
 
 #include "../new_common.h"
@@ -16,6 +19,7 @@
 #include "../logging/logging.h"
 #include "../cJSON/cJSON.h"
 #include "../pal/keb_pal.h"
+#include "../net/keb_mdns_client.h"
 #include "drv_killbill_peak.h"
 #include "drv_killbill_p1.h"
 
@@ -27,6 +31,7 @@
 #define P1_DEFAULT_PORT          80
 #define P1_DATA_INTERVAL_MS      5000
 #define P1_TELEGRAM_INTERVAL_MS  60000
+#define P1_DISCOVER_RETRY_MS     60000
 
 static char     s_p1_host[64];
 static uint16_t s_port;
@@ -35,6 +40,13 @@ static uint32_t s_last_telegram_ms;
 static uint32_t s_last_ok_ms;
 static bool     s_data_in_flight;
 static bool     s_telegram_in_flight;
+
+// mDNS discovery state — written from background task, read from main loop
+static volatile bool s_discover_pending;   // true = result ready to apply
+static char          s_discovered_host[64];
+static uint16_t      s_discovered_port;
+static uint32_t      s_last_discover_ms;
+static bool          s_discover_running;
 
 // Parse the second float in an OBIS line like: 1-0:1.6.0(timestamp)(value*kW)
 static float parse_obis_second_float(const char *data, const char *obis) {
@@ -119,6 +131,32 @@ static commandResult_t P1_SetPortCmd(const void *ctx, const char *cmd,
     return CMD_RES_OK;
 }
 
+// Background task: runs keb_mdns_discover_p1() then signals the main loop.
+static void p1_discover_task(void *arg) {
+    (void)arg;
+    char host[64] = {0};
+    uint16_t port = 80;
+    keb_log("P1", "mDNS discovery started");
+    bool ok = keb_mdns_discover_p1(host, sizeof(host), &port);
+    if (ok) {
+        strncpy(s_discovered_host, host, sizeof(s_discovered_host) - 1);
+        s_discovered_host[sizeof(s_discovered_host) - 1] = '\0';
+        s_discovered_port   = port;
+        s_discover_pending  = true;  // signal main loop
+        keb_log("P1", "mDNS: found %s:%u", host, port);
+    } else {
+        keb_log("P1", "mDNS: no P1 meter found");
+    }
+    s_discover_running = false;
+}
+
+static void p1_start_discovery(void) {
+    if (s_discover_running) return;
+    s_discover_running   = true;
+    s_last_discover_ms   = keb_millis();
+    keb_run_in_background("keb_p1_disc", p1_discover_task, NULL);
+}
+
 void P1_Init(void) {
     s_p1_host[0]         = '\0';
     s_port               = P1_DEFAULT_PORT;
@@ -127,6 +165,11 @@ void P1_Init(void) {
     s_last_ok_ms         = 0;
     s_data_in_flight     = false;
     s_telegram_in_flight = false;
+    s_discover_pending   = false;
+    s_discover_running   = false;
+    s_last_discover_ms   = 0;
+    s_discovered_host[0] = '\0';
+    s_discovered_port    = 80;
 
     keb_cfg_get_str(P1_HOST_KEY, s_p1_host, sizeof(s_p1_host));
     int32_t port;
@@ -147,14 +190,35 @@ void P1_Init(void) {
     if (s_p1_host[0] != '\0') {
         keb_log("P1", "host=%s port=%u", s_p1_host, s_port);
     } else {
-        keb_log("P1", "no host — use KEB_SetP1Host <ip> to configure");
+        keb_log("P1", "no host — starting mDNS discovery");
+        p1_start_discovery();
     }
 }
 
 void P1_Update(void) {
-    if (s_p1_host[0] == '\0') return;
-
     uint32_t now = keb_millis();
+
+    // Apply discovery result from background task
+    if (s_discover_pending) {
+        s_discover_pending = false;
+        strncpy(s_p1_host, s_discovered_host, sizeof(s_p1_host) - 1);
+        s_p1_host[sizeof(s_p1_host) - 1] = '\0';
+        s_port = s_discovered_port;
+        keb_cfg_set_str(P1_HOST_KEY, s_p1_host);
+        keb_cfg_set_i32(P1_PORT_KEY, (int32_t)s_port);
+        s_last_data_ms     = 0; // trigger immediate poll
+        s_last_telegram_ms = 0;
+        keb_log("P1", "applied discovered host=%s port=%u", s_p1_host, s_port);
+    }
+
+    // Retry discovery if still unconfigured
+    if (s_p1_host[0] == '\0') {
+        if (!s_discover_running &&
+            (s_last_discover_ms == 0 || (now - s_last_discover_ms) >= P1_DISCOVER_RETRY_MS)) {
+            p1_start_discovery();
+        }
+        return;
+    }
 
     if (!s_data_in_flight &&
         (s_last_data_ms == 0 || (now - s_last_data_ms) >= P1_DATA_INTERVAL_MS)) {

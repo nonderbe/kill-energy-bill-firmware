@@ -34,3 +34,10 @@ bool keb_relay_get(int ch);
 // user is passed through unchanged to the callback.
 typedef void (*keb_http_cb)(int status, const char *body, void *user);
 void keb_http_get(const char *url, int timeout_ms, keb_http_cb cb, void *user);
+
+// --- Background task ---
+// Spawns a new FreeRTOS/RTOS task that calls fn(arg) once then exits.
+// Stack size is fixed at 4 KB — suitable for blocking I/O (mDNS discovery, etc.).
+// fn must be safe to call from a task context; arg ownership transfers to fn.
+typedef void (*keb_task_fn)(void *arg);
+void keb_run_in_background(const char *name, keb_task_fn fn, void *arg);
